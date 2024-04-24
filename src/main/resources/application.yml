@@ -1,0 +1,58 @@
+spring:
+  profiles:
+    active: dev
+  application:
+    name: partner-match-backend
+  datasource:
+    url: jdbc:mysql://localhost:3306/partner_match
+    username: root
+    password: "000000"
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    type: com.zaxxer.hikari.HikariDataSource
+    Hikari:
+      # 最小空闲连接数量
+      minimum-idle: 5
+      # 最大连接池大小
+      maximum-pool-size: 10
+      # 自动提交
+      auto-commit: true
+      # 一个连接idle状态的最大时长（毫秒），超时则被释放（retired），缺省:10分钟
+      idle-timeout: 600000
+      # 连接池名字
+      pool-name: HikariCP
+      # 一个连接的生命时长（毫秒），超时而且没被使用则被释放（retired），缺省:30分钟，建议设置比数据库超时时长少30秒
+      max-lifetime: 1800000
+      # 等待连接池分配连接的最大时长（毫秒），超过这个时长还没可用的连接则发生SQLException， 缺省:30秒
+      connection-timeout: 30000
+  mvc:
+    pathmatch:
+      # 修改SpringMVC默认路径匹配策略
+      matching-strategy: ANT_PATH_MATCHER
+  session:
+    store-type: redis
+  # redis 配置
+  redis:
+    port: 6379
+    host: localhost
+    database: 1
+
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+    session:
+      timeout: 30m
+      cookie:
+        domain: localhost
+
+mybatis-plus:
+  configuration:
+    #开启控制台SQL语句打印
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    map-underscore-to-camel-case: true
+  global-config:
+    db-config:
+      # 逻辑删除
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
