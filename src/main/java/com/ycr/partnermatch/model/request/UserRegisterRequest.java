@@ -1,4 +1,4 @@
-package com.ycr.partnermatch.model.domain.request;
+package com.ycr.partnermatch.model.request;
 
 import lombok.Data;
 

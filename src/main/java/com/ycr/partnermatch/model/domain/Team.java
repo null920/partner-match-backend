@@ -1,20 +1,19 @@
 package com.ycr.partnermatch.model.domain;
 
 import com.baomidou.mybatisplus.annotation.*;
+import lombok.Data;
 
 import java.io.Serializable;
 import java.util.Date;
 
-import lombok.Data;
-
 /**
- * 标签
+ * 队伍
  *
- * @TableName tag
+ * @TableName team
  */
-@TableName(value = "tag")
+@TableName(value = "team")
 @Data
-public class Tag implements Serializable {
+public class Team implements Serializable {
 	/**
 	 * id
 	 */
@@ -22,24 +21,39 @@ public class Tag implements Serializable {
 	private Long id;
 
 	/**
-	 * 标签名称
+	 * 队伍名称
 	 */
-	private String tagName;
+	private String teamName;
 
 	/**
-	 * 用户 id
+	 * 描述
+	 */
+	private String description;
+
+	/**
+	 * 最大人数
+	 */
+	private Integer maxNum;
+
+	/**
+	 * 过期时间
+	 */
+	private Date expireTime;
+
+	/**
+	 * 创建者id
 	 */
 	private Long userId;
 
 	/**
-	 * 父标签 id
+	 * 队伍状态 0-公开，1-私有，2-加密
 	 */
-	private Long parentId;
+	private Integer status;
 
 	/**
-	 * 是否是父标签 0-不是 1-是
+	 * 密码
 	 */
-	private Integer isParent;
+	private String password;
 
 	/**
 	 * 创建时间（数据插入时间）

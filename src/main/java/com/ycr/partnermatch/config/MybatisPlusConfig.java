@@ -10,7 +10,6 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 @MapperScan("com.ycr.partnermatch.mapper")
 public class MybatisPlusConfig {
-
 	/**
 	 * 添加分页插件
 	 */
