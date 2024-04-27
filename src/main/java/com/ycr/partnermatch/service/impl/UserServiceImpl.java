@@ -226,6 +226,19 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 	}
 
 	@Override
+	public User selectUserById(Long id) {
+		QueryWrapper<User> wrapper = new QueryWrapper<>();
+		wrapper.eq("id", id);
+		return userMapper.selectOne(wrapper);
+	}
+
+	/**
+	 * 获取当前登录用户
+	 *
+	 * @param request http请求
+	 * @return 当前登录用户
+	 */
+	@Override
 	public User getLoginUser(HttpServletRequest request) {
 		if (request == null) {
 			return null;
@@ -236,14 +249,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 		}
 		return loginUser;
 	}
-
-	@Override
-	public User selectUserById(Long id) {
-		QueryWrapper<User> wrapper = new QueryWrapper<>();
-		wrapper.eq("id", id);
-		return userMapper.selectOne(wrapper);
-	}
-
 
 	/**
 	 * 判断是否为管理员

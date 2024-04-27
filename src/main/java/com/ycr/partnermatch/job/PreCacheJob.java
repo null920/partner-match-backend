@@ -44,7 +44,7 @@ public class PreCacheJob {
 		try {
 			// 只有一个线程能获得锁
 			if (lock.tryLock(0, 30000L, TimeUnit.MILLISECONDS)) {
-				System.out.println("getLock：" + Thread.currentThread().getId());
+				// System.out.println("getLock：" + Thread.currentThread().getId());
 				for (Long userId : mainUserList) {
 					QueryWrapper<User> wrapper = new QueryWrapper<>();
 					Page<User> userPage = userService.page(new Page<>(1, 20), wrapper);
@@ -62,7 +62,7 @@ public class PreCacheJob {
 		} finally {
 			// 只允许释放自己的锁
 			if (lock.isHeldByCurrentThread()) {
-				System.out.println("unLock：" + Thread.currentThread().getId());
+				// System.out.println("unLock：" + Thread.currentThread().getId());
 				lock.unlock();
 			}
 		}

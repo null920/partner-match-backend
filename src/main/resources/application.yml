@@ -4,7 +4,7 @@ spring:
   application:
     name: partner-match-backend
   datasource:
-    url: jdbc:mysql://localhost:3306/partner_match
+    url: jdbc:mysql://localhost:3306/partner_match?serverTimezone=Asia/Shanghai
     username: root
     password: "000000"
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -41,7 +41,7 @@ server:
   servlet:
     context-path: /api
     session:
-      timeout: 30m
+      timeout: 86400
       cookie:
         domain: localhost
 
