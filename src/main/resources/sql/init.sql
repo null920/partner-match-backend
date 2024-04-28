@@ -49,7 +49,7 @@ create table team
     user_id     bigint comment '创建者id',
     status      int      default 0                 not null comment '队伍状态 0-公开，1-私有，2-加密',
     password    varchar(512)                       null comment '密码',
-    create_time datetime default CURRENT_TIMESTAMP null on update CURRENT_TIMESTAMP comment '创建时间（数据插入时间）',
+    create_time datetime default CURRENT_TIMESTAMP null comment '创建时间（数据插入时间）',
     update_time datetime default CURRENT_TIMESTAMP null on update CURRENT_TIMESTAMP comment '更新时间（数据更新时间）',
     deleted     tinyint  default 0                 not null comment '是否删除 0 1（逻辑删除）'
 )

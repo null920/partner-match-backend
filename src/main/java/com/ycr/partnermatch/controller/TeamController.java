@@ -6,9 +6,11 @@ import com.ycr.partnermatch.common.BaseResponse;
 import com.ycr.partnermatch.common.ErrorCode;
 import com.ycr.partnermatch.exception.BusinessException;
 import com.ycr.partnermatch.model.domain.Team;
-import com.ycr.partnermatch.model.domain.User;
 import com.ycr.partnermatch.model.dto.TeamQuery;
 import com.ycr.partnermatch.model.request.AddTeamRequest;
+import com.ycr.partnermatch.model.request.TeamJoinRequest;
+import com.ycr.partnermatch.model.request.TeamUpdateRequest;
+import com.ycr.partnermatch.model.vo.TeamUserVO;
 import com.ycr.partnermatch.service.TeamService;
 import com.ycr.partnermatch.service.UserService;
 import com.ycr.partnermatch.utils.ReturnResultUtils;
@@ -68,11 +70,11 @@ public class TeamController {
 	}
 
 	@PostMapping("/update")
-	public BaseResponse<Boolean> updateTeam(@RequestBody Team team, HttpServletRequest request) {
-		if (team == null) {
+	public BaseResponse<Boolean> updateTeam(@RequestBody TeamUpdateRequest teamUpdateRequest, HttpServletRequest request) {
+		if (teamUpdateRequest == null) {
 			throw new BusinessException(ErrorCode.PARAMS_ERROR);
 		}
-		boolean result = teamService.updateById(team);
+		boolean result = teamService.updateTeam(teamUpdateRequest, request);
 		if (!result) {
 			return ReturnResultUtils.error(ErrorCode.SYSTEM_ERROR, "更新失败");
 		}
@@ -94,15 +96,13 @@ public class TeamController {
 	}
 
 	@GetMapping("/list")
-	public BaseResponse<List<Team>> listTeam(TeamQuery teamQuery) {
+	public BaseResponse<List<TeamUserVO>> listTeam(TeamQuery teamQuery, HttpServletRequest request) {
 		// 1. 校验
 		if (teamQuery == null) {
 			throw new BusinessException(ErrorCode.PARAMS_ERROR);
 		}
 		// 2. 查询
-		Team team = new Team();
-		BeanUtils.copyProperties(teamQuery, team);
-		List<Team> teamList = teamService.list(new QueryWrapper<>(team));
+		List<TeamUserVO> teamList = teamService.teamList(teamQuery, request);
 		return ReturnResultUtils.success(teamList);
 	}
 
@@ -118,5 +118,14 @@ public class TeamController {
 		Page<Team> page = new Page<>(teamQuery.getPageNum(), teamQuery.getPageSize());
 		Page<Team> resultPage = teamService.page(page, new QueryWrapper<>(team));
 		return ReturnResultUtils.success(resultPage);
+	}
+
+	@PostMapping("/join")
+	public BaseResponse<Boolean> joinTeam(@RequestBody TeamJoinRequest teamJoinRequest, HttpServletRequest request) {
+		// 1. 校验
+		if (teamJoinRequest == null) {
+			throw new BusinessException(ErrorCode.PARAMS_ERROR);
+		}
+		return ReturnResultUtils.success(teamService.joinTeam(teamJoinRequest, request));
 	}
 }

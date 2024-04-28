@@ -2,9 +2,13 @@ package com.ycr.partnermatch.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.ycr.partnermatch.model.domain.Team;
-import org.springframework.http.HttpRequest;
+import com.ycr.partnermatch.model.dto.TeamQuery;
+import com.ycr.partnermatch.model.request.TeamJoinRequest;
+import com.ycr.partnermatch.model.request.TeamUpdateRequest;
+import com.ycr.partnermatch.model.vo.TeamUserVO;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.List;
 
 /**
  * @author null&&
@@ -15,10 +19,36 @@ public interface TeamService extends IService<Team> {
 	/**
 	 * 添加队伍
 	 *
-	 * @param team
-	 * @param request
-	 * @return
+	 * @param team    队伍
+	 * @param request http请求
+	 * @return 队伍id
 	 */
 	long addTeam(Team team, HttpServletRequest request);
 
+	/**
+	 * 搜索队伍
+	 *
+	 * @param teamQuery 搜索队伍参数
+	 * @param request   http请求
+	 * @return 队伍列表
+	 */
+	List<TeamUserVO> teamList(TeamQuery teamQuery, HttpServletRequest request);
+
+	/**
+	 * 更新队伍
+	 *
+	 * @param teamUpdateRequest 更新队伍参数
+	 * @param request           http请求
+	 * @return 是否更新成功
+	 */
+	boolean updateTeam(TeamUpdateRequest teamUpdateRequest, HttpServletRequest request);
+
+	/**
+	 * 加入队伍
+	 *
+	 * @param teamJoinRequest 加入队伍参数
+	 * @param request         http请求
+	 * @return 是否加入成功
+	 */
+	boolean joinTeam(TeamJoinRequest teamJoinRequest, HttpServletRequest request);
 }
