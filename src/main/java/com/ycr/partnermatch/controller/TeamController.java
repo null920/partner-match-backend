@@ -6,9 +6,11 @@ import com.ycr.partnermatch.common.BaseResponse;
 import com.ycr.partnermatch.common.ErrorCode;
 import com.ycr.partnermatch.exception.BusinessException;
 import com.ycr.partnermatch.model.domain.Team;
+import com.ycr.partnermatch.model.domain.User;
 import com.ycr.partnermatch.model.dto.TeamQuery;
 import com.ycr.partnermatch.model.request.AddTeamRequest;
 import com.ycr.partnermatch.model.request.TeamJoinRequest;
+import com.ycr.partnermatch.model.request.TeamQuitRequest;
 import com.ycr.partnermatch.model.request.TeamUpdateRequest;
 import com.ycr.partnermatch.model.vo.TeamUserVO;
 import com.ycr.partnermatch.service.TeamService;
@@ -56,13 +58,13 @@ public class TeamController {
 	}
 
 	@PostMapping("/delete")
-	public BaseResponse<Boolean> deleteTeam(@RequestBody long id) {
+	public BaseResponse<Boolean> deleteTeam(@RequestBody long teamId, HttpServletRequest request) {
 		// 1. 校验
-		if (id <= 0) {
+		if (teamId <= 0) {
 			throw new BusinessException(ErrorCode.PARAMS_ERROR);
 		}
 		// 2. 删除
-		boolean result = teamService.removeById(id);
+		boolean result = teamService.deleteTeam(teamId, request);
 		if (!result) {
 			return ReturnResultUtils.error(ErrorCode.SYSTEM_ERROR, "删除失败");
 		}
@@ -126,6 +128,25 @@ public class TeamController {
 		if (teamJoinRequest == null) {
 			throw new BusinessException(ErrorCode.PARAMS_ERROR);
 		}
-		return ReturnResultUtils.success(teamService.joinTeam(teamJoinRequest, request));
+		boolean result = teamService.joinTeam(teamJoinRequest, request);
+		if (!result) {
+			return ReturnResultUtils.error(ErrorCode.SYSTEM_ERROR, "加入失败");
+		}
+		return ReturnResultUtils.success(true);
 	}
+
+	@PostMapping("/quit")
+	public BaseResponse<Boolean> quitTeam(@RequestBody TeamQuitRequest teamQuitRequest, HttpServletRequest request) {
+		// 1. 校验
+		if (teamQuitRequest == null) {
+			throw new BusinessException(ErrorCode.PARAMS_ERROR);
+		}
+		boolean result = teamService.quitTeam(teamQuitRequest, request);
+		if (!result) {
+			return ReturnResultUtils.error(ErrorCode.SYSTEM_ERROR, "退出失败");
+		}
+		return ReturnResultUtils.success(true);
+	}
+
+
 }

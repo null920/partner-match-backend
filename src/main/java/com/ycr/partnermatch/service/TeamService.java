@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.ycr.partnermatch.model.domain.Team;
 import com.ycr.partnermatch.model.dto.TeamQuery;
 import com.ycr.partnermatch.model.request.TeamJoinRequest;
+import com.ycr.partnermatch.model.request.TeamQuitRequest;
 import com.ycr.partnermatch.model.request.TeamUpdateRequest;
 import com.ycr.partnermatch.model.vo.TeamUserVO;
 
@@ -51,4 +52,22 @@ public interface TeamService extends IService<Team> {
 	 * @return 是否加入成功
 	 */
 	boolean joinTeam(TeamJoinRequest teamJoinRequest, HttpServletRequest request);
+
+	/**
+	 * 退出队伍
+	 *
+	 * @param teamQuitRequest 退出队伍参数
+	 * @param request         http请求
+	 * @return 是否退出成功
+	 */
+	boolean quitTeam(TeamQuitRequest teamQuitRequest, HttpServletRequest request);
+
+	/**
+	 * 解散队伍
+	 *
+	 * @param teamId  队伍id
+	 * @param request http请求
+	 * @return 是否解散成功
+	 */
+	boolean deleteTeam(long teamId, HttpServletRequest request);
 }

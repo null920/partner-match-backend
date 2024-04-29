@@ -10,7 +10,8 @@ package com.ycr.partnermatch.model.enums;
 public enum TeamStatusEnum {
 	PUBLIC(0, "公开"),
 	PRIVATE(1, "私有"),
-	ENCRYPT(2, "加密");
+	ENCRYPT(2, "加密"),
+	DELETED(-1, "已删除");
 
 	private int value;
 	private String text;
