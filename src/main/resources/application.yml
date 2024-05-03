@@ -48,8 +48,9 @@ server:
 mybatis-plus:
   configuration:
     #开启控制台SQL语句打印
-    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    #    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
     map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.nologging.NoLoggingImpl
   global-config:
     db-config:
       # 逻辑删除
