@@ -121,7 +121,10 @@ public class UserController {
 
     // 伙伴匹配首页推荐
     @GetMapping("/recommend")
-    public BaseResponse<List<User>> recommendUsers(long pageSize, long pageNum, HttpServletRequest request) {
+    public BaseResponse<List<User>> recommendUsers(Long pageSize, Long pageNum, HttpServletRequest request) {
+        if (pageSize == null || pageNum == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数为空");
+        }
         List<User> userList = userService.recommendUsers(pageSize, pageNum, request);
         return ReturnResultUtils.success(userList);
     }

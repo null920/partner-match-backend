@@ -37,13 +37,13 @@ public interface TeamService extends IService<Team> {
     List<TeamUserVO> teamList(TeamQuery teamQuery, HttpServletRequest request);
 
     /**
-     * 获取我的队伍列表（我创建的/我加入的）
+     * 获取我管理的队伍列表
      *
      * @param teamQuery 队伍搜索参数
      * @param request   http请求
      * @return 队伍列表
      */
-    List<TeamUserVO> getMyTeamList(TeamQuery teamQuery, HttpServletRequest request);
+    List<TeamUserVO> getMyCreateTeamList(TeamQuery teamQuery, HttpServletRequest request);
 
     /**
      * 更新队伍
@@ -82,9 +82,11 @@ public interface TeamService extends IService<Team> {
     boolean deleteTeam(TeamDeleteRequest teamDeleteRequest, HttpServletRequest request);
 
     /**
-     * 获取用户加入的队伍列表
+     * 获取我加入的队伍列表
      *
-     * @param teamList 所有的队伍列表
+     * @param teamQuery 队伍搜索参数
+     * @param request   http请求
+     * @return 我加入的队伍列表
      */
-    List<TeamUserVO> getUserJoinTeamList(List<TeamUserVO> teamList, HttpServletRequest request);
+    List<TeamUserVO> getUserJoinTeamList(TeamQuery teamQuery, HttpServletRequest request);
 }

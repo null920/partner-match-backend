@@ -148,6 +148,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
         QueryWrapper<User> wrapper = new QueryWrapper<>();
+        wrapper.isNotNull("tags");
         List<User> userList = userMapper.selectList(wrapper);
         Gson gson = new Gson();
         return userList.stream().filter(user -> {
@@ -180,8 +181,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 
     @Override
     public List<User> recommendUsers(long pageSize, long pageNum, HttpServletRequest request) {
-        User loginUser = this.getLoginUser(request);
-        String redisKey = String.format("partnerMatch:user:recommend:%s", loginUser.getId());
+        String redisKey = String.format("partnerMatch:recommend:pageNum:%s", pageNum);
         ValueOperations<String, Object> valueOperations = redisTemplate.opsForValue();
         // 先查缓存
         Page<User> userPage = (Page<User>) valueOperations.get(redisKey);

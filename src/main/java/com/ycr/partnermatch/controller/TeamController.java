@@ -44,7 +44,6 @@ public class TeamController {
     private UserService userService;
     @Resource
     private TeamService teamService;
-
     @Resource
     private UserTeamService userTeamService;
 
@@ -110,7 +109,6 @@ public class TeamController {
         }
         // 2. 查询
         List<TeamUserVO> teamList = teamService.teamList(teamQuery, request);
-        teamList = teamService.getUserJoinTeamList(teamList, request);
         return ReturnResultUtils.success(teamList);
     }
 
@@ -161,7 +159,7 @@ public class TeamController {
         }
         User loginUser = userService.getLoginUser(request);
         teamQuery.setUserId(loginUser.getId());
-        List<TeamUserVO> teamList = teamService.getMyTeamList(teamQuery, request);
+        List<TeamUserVO> teamList = teamService.getMyCreateTeamList(teamQuery, request);
         return ReturnResultUtils.success(teamList);
     }
 
@@ -170,15 +168,7 @@ public class TeamController {
         if (teamQuery == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
-        User loginUser = userService.getLoginUser(request);
-        QueryWrapper<UserTeam> wrapper = new QueryWrapper<>();
-        wrapper.eq("user_id", loginUser.getId());
-        List<UserTeam> userTeamList = userTeamService.list(wrapper);
-        // 按照 teamId 分组
-        Map<Long, List<UserTeam>> listMap = userTeamList.stream().collect(Collectors.groupingBy(UserTeam::getTeamId));
-        teamQuery.setIdList(new ArrayList<>(listMap.keySet()));
-        List<TeamUserVO> teamList = teamService.getMyTeamList(teamQuery, request);
+        List<TeamUserVO> teamList = teamService.getUserJoinTeamList(teamQuery, request);
         return ReturnResultUtils.success(teamList);
     }
-
 }
