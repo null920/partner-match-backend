@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.ycr.partnermatch.common.ErrorCode;
 import com.ycr.partnermatch.exception.BusinessException;
 import com.ycr.partnermatch.mapper.TeamMapper;
+import com.ycr.partnermatch.mapper.UserTeamMapper;
 import com.ycr.partnermatch.model.domain.Team;
 import com.ycr.partnermatch.model.domain.User;
 import com.ycr.partnermatch.model.domain.UserTeam;
@@ -47,6 +48,9 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
 
     @Resource
     private UserService userService;
+
+    @Resource
+    private UserTeamMapper userTeamMapper;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -127,7 +131,8 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
         if (statusEnum == null) {
             statusEnum = TeamStatusEnum.PUBLIC;
         }
-        if (!isAdmin(request) && !TeamStatusEnum.PUBLIC.equals(statusEnum)) {
+        // 非管理员或非本人不能查询私密队伍
+        if (!isAdmin(request) && TeamStatusEnum.PRIVATE.equals(statusEnum)) {
             throw new BusinessException(ErrorCode.NO_AUTH);
         }
         wrapper.eq("status", statusEnum.getValue());
@@ -223,22 +228,25 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
         if (hasJoinNum > 5) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "最多创建和加入5个队伍");
         }
-        // 判断是否已经加入该队伍
-        wrapper = new QueryWrapper<>();
-        wrapper.eq("team_id", teamId);
-        wrapper.eq("user_id", userId);
-        if (userTeamService.count(wrapper) > 0) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户已加入该队伍");
-        }
         // 已加入队伍的人数
         long teamHasJoinNum = getTeamHasJoinNum(teamId);
         if (teamHasJoinNum >= team.getMaxNum()) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "队伍已满");
         }
+        // 判断是否已经加入该队伍
+        UserTeam userHasJoinTeam = userTeamMapper.getUserHasJoinTeam(teamId, userId);
+        if (userHasJoinTeam != null && userHasJoinTeam.getDeleted() != 1) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户已加入该队伍");
+        }
+        // 已经加入过队伍，恢复数据
+        if (userHasJoinTeam != null) {
+            return userTeamMapper.recoverUserTeam(teamId, userId);
+        }
         UserTeam userTeam = new UserTeam();
         userTeam.setUserId(userId);
         userTeam.setTeamId(teamId);
         userTeam.setJoinTime(new Date());
+        // 第一次加入队伍
         return userTeamService.save(userTeam);
     }
 

@@ -17,15 +17,22 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice
 @Slf4j
 public class GlobalExceptionHandler {
-	@ExceptionHandler(BusinessException.class)
-	public <T> BaseResponse<T> businessExceptionHandler(BusinessException e) {
-		log.error("BusinessException" + e.getMessage(), e);
-		return ReturnResultUtils.error(ErrorCode.SYSTEM_ERROR, e.getMessage(), e.getDesc());
-	}
+    @ExceptionHandler(BusinessException.class)
+    public <T> BaseResponse<T> businessExceptionHandler(BusinessException e) {
+        if (e.getCode() == ErrorCode.PARAMS_ERROR.getCode()) {
+            log.error("BusinessException" + e.getMessage(), e);
+            return ReturnResultUtils.error(ErrorCode.PARAMS_ERROR, e.getMessage(), e.getDesc());
+        } else if (e.getCode() == ErrorCode.NOT_LOGIN.getCode()) {
+            log.error("BusinessException" + e.getMessage(), e);
+            return ReturnResultUtils.error(ErrorCode.NOT_LOGIN, e.getMessage(), e.getDesc());
+        }
+        log.error("BusinessException" + e.getMessage(), e);
+        return ReturnResultUtils.error(ErrorCode.SYSTEM_ERROR, e.getMessage(), e.getDesc());
+    }
 
-	@ExceptionHandler(RuntimeException.class)
-	public <T> BaseResponse<T> businessExceptionHandler(RuntimeException e) {
-		log.error("RuntimeException", e);
-		return ReturnResultUtils.error(ErrorCode.SYSTEM_ERROR, e.getMessage(), "");
-	}
+    @ExceptionHandler(RuntimeException.class)
+    public <T> BaseResponse<T> businessExceptionHandler(RuntimeException e) {
+        log.error("RuntimeException", e);
+        return ReturnResultUtils.error(ErrorCode.SYSTEM_ERROR, e.getMessage(), "");
+    }
 }
