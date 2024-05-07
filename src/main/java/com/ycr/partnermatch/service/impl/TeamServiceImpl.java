@@ -3,6 +3,8 @@ package com.ycr.partnermatch.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import com.ycr.partnermatch.common.ErrorCode;
 import com.ycr.partnermatch.exception.BusinessException;
 import com.ycr.partnermatch.mapper.TeamMapper;
@@ -22,6 +24,8 @@ import com.ycr.partnermatch.service.TeamService;
 import com.ycr.partnermatch.service.UserService;
 import com.ycr.partnermatch.service.UserTeamService;
 import org.apache.commons.lang3.StringUtils;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +33,7 @@ import org.springframework.transaction.annotation.Transactional;
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static com.ycr.partnermatch.constant.UserConstant.ADMIN_ROLE;
@@ -52,6 +57,9 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
     @Resource
     private UserTeamMapper userTeamMapper;
 
+    @Resource
+    private RedissonClient redissonClient;
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public long addTeam(Team team, HttpServletRequest request) {
@@ -72,7 +80,7 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
         }
         // 校验队伍名称 1-20
         String teamName = team.getTeamName();
-        if (StringUtils.isBlank(teamName) || teamName.length() < 1 || teamName.length() > 20) {
+        if (StringUtils.isBlank(teamName) || teamName.length() > 20) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "队伍名称不满足要求");
         }
         // 校验描述 0-512
@@ -94,32 +102,53 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
         if (new Date().after(team.getExpireTime())) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "过期时间 > 当前时间");
         }
-        // 队伍数量校验
-        // todo 有可能同时创建100个队伍
-        QueryWrapper<Team> wrapper = new QueryWrapper<>();
-        wrapper.eq("user_id", userId);
-        long hasTeamNum = this.count(wrapper);
-        if (hasTeamNum >= 5) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR, "最多创建5个队伍");
+        // 分布式锁同时同一个用户只允许执行一个插入操作
+        RLock lock = redissonClient.getLock(String.format("partnerMatch:addTeam:userId:%s", userId));
+        int addTeamCount = 5;
+        try {
+            while (true) {
+                if (addTeamCount == 0) {
+                    throw new BusinessException(ErrorCode.LOCK_TIMEOUT);
+                }
+                if (lock.tryLock(0, 10000, TimeUnit.MILLISECONDS)) {
+                    // 队伍数量校验
+                    QueryWrapper<Team> wrapper = new QueryWrapper<>();
+                    wrapper.eq("user_id", userId);
+                    long hasTeamNum = this.count(wrapper);
+                    if (hasTeamNum >= 5) {
+                        throw new BusinessException(ErrorCode.PARAMS_ERROR, "最多创建5个队伍");
+                    }
+                    // 插入队伍
+                    team.setId(null);
+                    team.setUserId(userId);
+                    boolean saveResult = this.save(team);
+                    Long teamId = team.getId();
+                    if (!saveResult || teamId == null) {
+                        throw new BusinessException(ErrorCode.SYSTEM_ERROR, "创建队伍失败");
+                    }
+                    // 插入队伍用户关系
+                    UserTeam userTeam = new UserTeam();
+                    userTeam.setUserId(userId);
+                    userTeam.setTeamId(teamId);
+                    userTeam.setJoinTime(new Date());
+                    saveResult = userTeamService.save(userTeam);
+                    if (!saveResult) {
+                        throw new BusinessException(ErrorCode.SYSTEM_ERROR, "创建队伍失败");
+                    }
+                    return teamId;
+                } else {
+                    addTeamCount--;
+                }
+            }
+        } catch (InterruptedException e) {
+            log.error("addTeam Exception", e);
+            return 0;
+        } finally {
+            // 只允许释放自己的锁
+            if (lock.isHeldByCurrentThread()) {
+                lock.unlock();
+            }
         }
-        // 插入队伍
-        team.setId(null);
-        team.setUserId(userId);
-        boolean saveResult = this.save(team);
-        Long teamId = team.getId();
-        if (!saveResult || teamId == null) {
-            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "创建队伍失败");
-        }
-        // 插入队伍用户关系
-        UserTeam userTeam = new UserTeam();
-        userTeam.setUserId(userId);
-        userTeam.setTeamId(teamId);
-        userTeam.setJoinTime(new Date());
-        saveResult = userTeamService.save(userTeam);
-        if (!saveResult) {
-            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "创建队伍失败");
-        }
-        return teamId;
     }
 
     @Override
@@ -160,17 +189,25 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
             teamUserVOList.add(teamUserVO);
         }
         List<Long> teamIdList = teamUserVOList.stream().map(TeamUserVO::getId).collect(Collectors.toList());
-        QueryWrapper<UserTeam> userTeamQueryWrapper = new QueryWrapper<>();
+        QueryWrapper<UserTeam> userHasJoinTeamWrapper = new QueryWrapper<>();
         try {
+            // 当前登录用户已加入的队伍的信息
             User loginUser = userService.getLoginUser(request);
-            userTeamQueryWrapper.eq("user_id", loginUser.getId());
-            userTeamQueryWrapper.in("team_id", teamIdList);
-            List<UserTeam> userHasJoinTeamList = userTeamService.list(userTeamQueryWrapper);
-            // 用户已加入的队伍的 id
+            userHasJoinTeamWrapper.eq("user_id", loginUser.getId());
+            userHasJoinTeamWrapper.in("team_id", teamIdList);
+            List<UserTeam> userHasJoinTeamList = userTeamService.list(userHasJoinTeamWrapper);
+            // 当前登录的用户已加入的队伍 id
             Set<Long> userHasJoinTeamIdSet = userHasJoinTeamList.stream().map(UserTeam::getTeamId).collect(Collectors.toSet());
+            // 在当前用户已加入的队伍上打上标识
             teamUserVOList.forEach(team -> team.setHasJoin(userHasJoinTeamIdSet.contains(team.getId())));
         } catch (Exception e) {
         }
+        // 队伍内的成员信息
+        QueryWrapper<UserTeam> userHasJoinWrapper = new QueryWrapper<>();
+        userHasJoinWrapper.in("team_id", teamIdList);
+        List<UserTeam> userHasJoinList = userTeamService.list(userHasJoinWrapper);
+        Map<Long, List<UserTeam>> userTeamMapGroupByTeamId = userHasJoinList.stream().collect(Collectors.groupingBy(UserTeam::getTeamId));
+        teamUserVOList.forEach(team -> team.setTeamMemberNum(userTeamMapGroupByTeamId.getOrDefault(team.getId(), new ArrayList<>()).size()));
         return teamUserVOList;
     }
 
@@ -220,34 +257,63 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
                 throw new BusinessException(ErrorCode.PARAMS_ERROR, "密码错误");
             }
         }
-        // 判断用户最多加入5个队伍
         long userId = this.getLoginUser(request).getId();
-        QueryWrapper<UserTeam> wrapper = new QueryWrapper<>();
-        wrapper.eq("user_id", userId);
-        long hasJoinNum = userTeamService.count(wrapper);
-        if (hasJoinNum > 5) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR, "最多创建和加入5个队伍");
+        // 锁 锁的是对象
+        // 用String 的 intern() 方法保证只要 userId 相同就是锁的相同的对象，不加每次都会 new 一个新的 String
+        // synchronized (String.valueOf(userId).intern())
+
+        // 分布式锁 这个锁只解决了用户重复加入同一队伍的情况
+        // todo 防止用户同时请求超过限制的队伍
+        // 5 次拿锁拿不到就抛出
+        int getLockCount = 5;
+        RLock lock = redissonClient.getLock(String.format("partnerMatch:joinTeam:teamId:%s:userId:%s", teamId, userId));
+        try {
+            while (true) {
+                if (getLockCount == 0) {
+                    throw new BusinessException(ErrorCode.LOCK_TIMEOUT);
+                }
+                if (lock.tryLock(0, 10000, TimeUnit.MILLISECONDS)) {
+                    // 判断用户最多加入5个队伍
+                    QueryWrapper<UserTeam> wrapper = new QueryWrapper<>();
+                    wrapper.eq("user_id", userId);
+                    long hasJoinNum = userTeamService.count(wrapper);
+                    if (hasJoinNum > 5) {
+                        throw new BusinessException(ErrorCode.PARAMS_ERROR, "最多创建和加入5个队伍");
+                    }
+                    // 已加入队伍的人数
+                    long teamHasJoinNum = getTeamHasJoinNum(teamId);
+                    if (teamHasJoinNum >= team.getMaxNum()) {
+                        throw new BusinessException(ErrorCode.PARAMS_ERROR, "队伍已满");
+                    }
+                    // 判断是否已经加入该队伍
+                    UserTeam userHasJoinTeam = userTeamMapper.getUserHasJoinTeam(teamId, userId);
+                    if (userHasJoinTeam != null && userHasJoinTeam.getDeleted() != 1) {
+                        throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户已加入该队伍");
+                    }
+                    // 已经加入过队伍，恢复数据
+                    if (userHasJoinTeam != null) {
+                        return userTeamMapper.recoverUserTeam(teamId, userId);
+                    }
+                    UserTeam userTeam = new UserTeam();
+                    userTeam.setUserId(userId);
+                    userTeam.setTeamId(teamId);
+                    userTeam.setJoinTime(new Date());
+                    // 第一次加入队伍
+                    return userTeamService.save(userTeam);
+                } else {
+                    // 抢锁失败
+                    getLockCount--;
+                }
+            }
+        } catch (InterruptedException e) {
+            log.error("joinTeam error", e);
+            return false;
+        } finally {
+            // 只允许释放自己的锁
+            if (lock.isHeldByCurrentThread()) {
+                lock.unlock();
+            }
         }
-        // 已加入队伍的人数
-        long teamHasJoinNum = getTeamHasJoinNum(teamId);
-        if (teamHasJoinNum >= team.getMaxNum()) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR, "队伍已满");
-        }
-        // 判断是否已经加入该队伍
-        UserTeam userHasJoinTeam = userTeamMapper.getUserHasJoinTeam(teamId, userId);
-        if (userHasJoinTeam != null && userHasJoinTeam.getDeleted() != 1) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户已加入该队伍");
-        }
-        // 已经加入过队伍，恢复数据
-        if (userHasJoinTeam != null) {
-            return userTeamMapper.recoverUserTeam(teamId, userId);
-        }
-        UserTeam userTeam = new UserTeam();
-        userTeam.setUserId(userId);
-        userTeam.setTeamId(teamId);
-        userTeam.setJoinTime(new Date());
-        // 第一次加入队伍
-        return userTeamService.save(userTeam);
     }
 
     @Override
@@ -504,7 +570,10 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
         if (request == null) {
             return null;
         }
-        User loginUser = (User) request.getSession().getAttribute(USER_LOGIN_STATE);
+        String userJson = (String) request.getSession().getAttribute(USER_LOGIN_STATE);
+        Gson gson = new Gson();
+        User loginUser = gson.fromJson(userJson, new TypeToken<User>() {
+        }.getType());
         if (loginUser == null) {
             throw new BusinessException(ErrorCode.NO_AUTH, "未登录");
         }
@@ -518,8 +587,11 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
      * @return 是管理员返回true，不是返回false
      */
     private boolean isAdmin(HttpServletRequest request) {
-        User userObj = (User) request.getSession().getAttribute(USER_LOGIN_STATE);
-        return userObj != null && userObj.getUserRole().equals(ADMIN_ROLE);
+        String userJson = (String) request.getSession().getAttribute(USER_LOGIN_STATE);
+        Gson gson = new Gson();
+        User currentUser = gson.fromJson(userJson, new TypeToken<User>() {
+        }.getType());
+        return currentUser != null && currentUser.getUserRole().equals(ADMIN_ROLE);
     }
 }
 

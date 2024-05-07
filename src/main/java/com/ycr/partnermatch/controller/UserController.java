@@ -1,13 +1,15 @@
 package com.ycr.partnermatch.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import com.ycr.partnermatch.common.BaseResponse;
 import com.ycr.partnermatch.common.ErrorCode;
 import com.ycr.partnermatch.exception.BusinessException;
 import com.ycr.partnermatch.model.domain.User;
 import com.ycr.partnermatch.model.request.UserLoginRequest;
 import com.ycr.partnermatch.model.request.UserRegisterRequest;
-import com.ycr.partnermatch.model.vo.UserVO;
+import com.ycr.partnermatch.model.vo.IndexUserVO;
 import com.ycr.partnermatch.service.UserService;
 import com.ycr.partnermatch.utils.ReturnResultUtils;
 import lombok.extern.slf4j.Slf4j;
@@ -34,7 +36,7 @@ import static com.ycr.partnermatch.constant.UserConstant.USER_LOGIN_STATE;
 @RequestMapping("/user")
 @Slf4j
 @CrossOrigin(origins = {"https://user.null920.top", "http://user.null920.top", "http://localhost:3000", "http://127.0.0.1:3000",
-        "http://localhost:8000", "http://127.0.0.1:8000"},
+        "https://match.null920.top", "http://match.null920.top"},
         allowCredentials = "true")
 public class UserController {
     @Resource
@@ -86,7 +88,10 @@ public class UserController {
     @GetMapping("/current")
     public BaseResponse<User> getCurrentUser(HttpServletRequest request) {
         // 这样做的话如果用户的信息有更新，同时也要更新session
-        User currentUser = (User) request.getSession().getAttribute(USER_LOGIN_STATE);
+        String userJson = (String) request.getSession().getAttribute(USER_LOGIN_STATE);
+        Gson gson = new Gson();
+        User currentUser = gson.fromJson(userJson, new TypeToken<User>() {
+        }.getType());
         if (currentUser == null) {
             throw new BusinessException(ErrorCode.NOT_LOGIN, "请先登录");
         }
@@ -121,12 +126,12 @@ public class UserController {
 
     // 伙伴匹配首页推荐
     @GetMapping("/recommend")
-    public BaseResponse<List<User>> recommendUsers(Long pageSize, Long pageNum, HttpServletRequest request) {
+    public BaseResponse<IndexUserVO> recommendUsers(Long pageSize, Long pageNum, HttpServletRequest request) {
         if (pageSize == null || pageNum == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数为空");
         }
-        List<User> userList = userService.recommendUsers(pageSize, pageNum, request);
-        return ReturnResultUtils.success(userList);
+        IndexUserVO indexUserVO = userService.recommendUsers(pageSize, pageNum, request);
+        return ReturnResultUtils.success(indexUserVO);
     }
 
     // 获取最匹配的用户
@@ -151,7 +156,9 @@ public class UserController {
         if (result != null) {
             // 更新Session
             User safetyUser = userService.getSafetyUser(userService.selectUserById(user.getId()));
-            request.getSession().setAttribute(USER_LOGIN_STATE, safetyUser);
+            Gson gson = new Gson();
+            String safetyUserJson = gson.toJson(safetyUser);
+            request.getSession().setAttribute(USER_LOGIN_STATE, safetyUserJson);
             return ReturnResultUtils.success(result);
         }
         return ReturnResultUtils.error(ErrorCode.PARAMS_ERROR, "更新失败");
@@ -179,7 +186,10 @@ public class UserController {
      * @return 是管理员返回true，不是返回false
      */
     private boolean isAdmin(HttpServletRequest request) {
-        User userObj = (User) request.getSession().getAttribute(USER_LOGIN_STATE);
-        return userObj != null && userObj.getUserRole().equals(ADMIN_ROLE);
+        String userJson = (String) request.getSession().getAttribute(USER_LOGIN_STATE);
+        Gson gson = new Gson();
+        User currentUser = gson.fromJson(userJson, new TypeToken<User>() {
+        }.getType());
+        return currentUser != null && currentUser.getUserRole().equals(ADMIN_ROLE);
     }
 }

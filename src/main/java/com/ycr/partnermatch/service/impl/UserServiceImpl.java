@@ -9,6 +9,7 @@ import com.ycr.partnermatch.common.ErrorCode;
 import com.ycr.partnermatch.exception.BusinessException;
 import com.ycr.partnermatch.mapper.UserMapper;
 import com.ycr.partnermatch.model.domain.User;
+import com.ycr.partnermatch.model.vo.IndexUserVO;
 import com.ycr.partnermatch.service.UserService;
 import com.ycr.partnermatch.utils.AlgorithmUtils;
 import lombok.extern.slf4j.Slf4j;
@@ -131,8 +132,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         }
         // 脱敏
         User safetyUser = getSafetyUser(user);
+        Gson gson = new Gson();
+        String safetyUserJson = gson.toJson(safetyUser);
         // 记录用户的登录态
-        request.getSession().setAttribute(USER_LOGIN_STATE, safetyUser);
+        request.getSession().setAttribute(USER_LOGIN_STATE, safetyUserJson);
         return safetyUser;
     }
 
@@ -180,18 +183,22 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     }
 
     @Override
-    public List<User> recommendUsers(long pageSize, long pageNum, HttpServletRequest request) {
+    public IndexUserVO recommendUsers(long pageSize, long pageNum, HttpServletRequest request) {
         String redisKey = String.format("partnerMatch:recommend:pageNum:%s", pageNum);
         ValueOperations<String, Object> valueOperations = redisTemplate.opsForValue();
         // 先查缓存
         Page<User> userPage = (Page<User>) valueOperations.get(redisKey);
-        List<User> resultList;
+        List<User> userList;
+        IndexUserVO resultUserVO = new IndexUserVO();
+        QueryWrapper<User> wrapper = new QueryWrapper<>();
+        long pageCount = this.count(wrapper);
         if (userPage != null) {
-            resultList = userPage.getRecords().stream().map(this::getSafetyUser).collect(Collectors.toList());
-            return resultList;
+            userList = userPage.getRecords().stream().map(this::getSafetyUser).collect(Collectors.toList());
+            resultUserVO.setPageCount(pageCount);
+            resultUserVO.setUserVOList(userList);
+            return resultUserVO;
         }
         // 无缓存从数据库中查
-        QueryWrapper<User> wrapper = new QueryWrapper<>();
         userPage = this.page(new Page<>(pageNum, pageSize), wrapper);
         // 写缓存
         try {
@@ -199,8 +206,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         } catch (Exception e) {
             log.error("redis set key error", e);
         }
-        resultList = userPage.getRecords().stream().map(this::getSafetyUser).collect(Collectors.toList());
-        return resultList;
+        userList = userPage.getRecords().stream().map(this::getSafetyUser).collect(Collectors.toList());
+        resultUserVO.setUserVOList(userList);
+        resultUserVO.setPageCount(pageCount);
+        return resultUserVO;
     }
 
     @Override
@@ -290,7 +299,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         if (request == null) {
             return null;
         }
-        User loginUser = (User) request.getSession().getAttribute(USER_LOGIN_STATE);
+        String userJson = (String) request.getSession().getAttribute(USER_LOGIN_STATE);
+        Gson gson = new Gson();
+        User loginUser = gson.fromJson(userJson, new TypeToken<User>() {
+        }.getType());
         if (loginUser == null) {
             throw new BusinessException(ErrorCode.NO_AUTH, "未登录");
         }

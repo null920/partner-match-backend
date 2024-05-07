@@ -7,13 +7,11 @@ import com.ycr.partnermatch.common.ErrorCode;
 import com.ycr.partnermatch.exception.BusinessException;
 import com.ycr.partnermatch.model.domain.Team;
 import com.ycr.partnermatch.model.domain.User;
-import com.ycr.partnermatch.model.domain.UserTeam;
 import com.ycr.partnermatch.model.dto.TeamQuery;
 import com.ycr.partnermatch.model.request.*;
 import com.ycr.partnermatch.model.vo.TeamUserVO;
 import com.ycr.partnermatch.service.TeamService;
 import com.ycr.partnermatch.service.UserService;
-import com.ycr.partnermatch.service.UserTeamService;
 import com.ycr.partnermatch.utils.ReturnResultUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -21,10 +19,7 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * 队伍接口
@@ -37,15 +32,13 @@ import java.util.stream.Collectors;
 @RequestMapping("/team")
 @Slf4j
 @CrossOrigin(origins = {"https://user.null920.top", "http://user.null920.top", "http://localhost:3000", "http://127.0.0.1:3000",
-        "http://localhost:8000", "http://127.0.0.1:8000"},
+        "https://match.null920.top", "http://match.null920.top"},
         allowCredentials = "true")
 public class TeamController {
     @Resource
     private UserService userService;
     @Resource
     private TeamService teamService;
-    @Resource
-    private UserTeamService userTeamService;
 
     @PostMapping("/add")
     public BaseResponse<Long> addTeam(@RequestBody AddTeamRequest addTeamRequest, HttpServletRequest request) {
@@ -58,6 +51,9 @@ public class TeamController {
         // 2. 添加
         long teamId = teamService.addTeam(team, request);
         // 3. 返回结果
+        if (teamId == 0) {
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR);
+        }
         return ReturnResultUtils.success(teamId);
     }
 

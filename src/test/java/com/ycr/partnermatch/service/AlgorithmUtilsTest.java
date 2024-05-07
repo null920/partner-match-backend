@@ -2,6 +2,7 @@ package com.ycr.partnermatch.service;
 
 import com.ycr.partnermatch.utils.AlgorithmUtils;
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.SpringBootTest;
 
 import java.util.Arrays;
 import java.util.List;
@@ -12,6 +13,7 @@ import java.util.List;
  * @author null&&
  * @Date 2024/5/3 16:03
  */
+@SpringBootTest
 public class AlgorithmUtilsTest {
 
     @Test

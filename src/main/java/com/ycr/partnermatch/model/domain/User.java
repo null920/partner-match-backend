@@ -88,5 +88,5 @@ public class User implements Serializable {
 	private String tags;
 
 	@TableField(exist = false)
-	private static final long serialVersionUID = 1L;
+	private static final long serialVersionUID = 2728434441333864902L;
 }

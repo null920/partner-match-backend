@@ -2,7 +2,7 @@ package com.ycr.partnermatch.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.ycr.partnermatch.model.domain.User;
-import com.ycr.partnermatch.model.vo.UserVO;
+import com.ycr.partnermatch.model.vo.IndexUserVO;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.List;
@@ -67,14 +67,14 @@ public interface UserService extends IService<User> {
     List<User> searchUsersByTagsBySQL(List<String> tagNameList);
 
     /**
-     * 推荐用户
+     * 首页推荐用户
      *
      * @param pageSize 页面大小
      * @param pageNum  页码
      * @param request  http请求
-     * @return 用户list
+     * @return 首页用户视图对象
      */
-    List<User> recommendUsers(long pageSize, long pageNum, HttpServletRequest request);
+    IndexUserVO recommendUsers(long pageSize, long pageNum, HttpServletRequest request);
 
     /**
      * 更新用户信息
