@@ -1,4 +1,4 @@
-package com.ycr.partnermatch.mapper;
+package com.ycr.partnermatch.mapper.team;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.ycr.partnermatch.model.domain.Team;

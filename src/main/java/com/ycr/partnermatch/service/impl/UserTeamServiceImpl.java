@@ -2,7 +2,7 @@ package com.ycr.partnermatch.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.ycr.partnermatch.model.domain.UserTeam;
-import com.ycr.partnermatch.mapper.UserTeamMapper;
+import com.ycr.partnermatch.mapper.team.UserTeamMapper;
 import com.ycr.partnermatch.service.UserTeamService;
 import org.springframework.stereotype.Service;
 

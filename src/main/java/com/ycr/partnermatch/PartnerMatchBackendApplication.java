@@ -12,8 +12,8 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableConfigurationProperties
 public class PartnerMatchBackendApplication {
 
-	public static void main(String[] args) {
-		SpringApplication.run(PartnerMatchBackendApplication.class, args);
-	}
+    public static void main(String[] args) {
+        SpringApplication.run(PartnerMatchBackendApplication.class, args);
+    }
 
 }

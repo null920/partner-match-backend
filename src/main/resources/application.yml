@@ -4,11 +4,22 @@ spring:
   application:
     name: partner-match-backend
   datasource:
-    url: jdbc:mysql://localhost:3306/partner_match?serverTimezone=Asia/Shanghai
-    username: root
-    password: "000000"
-    driver-class-name: com.mysql.cj.jdbc.Driver
-    type: com.zaxxer.hikari.HikariDataSource
+    dynamic:
+      primary: master
+      strict: false
+      datasource:
+        master:
+          url: jdbc:mysql://localhost:3306/partner_match?serverTimezone=Asia/Shanghai
+          username: root
+          password: "000000"
+          driver-class-name: com.mysql.cj.jdbc.Driver
+          type: com.zaxxer.hikari.HikariDataSource
+        user:
+          url: jdbc:mysql://localhost:3306/userCenter?serverTimezone=Asia/Shanghai
+          username: root
+          password: "000000"
+          driver-class-name: com.mysql.cj.jdbc.Driver
+          type: com.zaxxer.hikari.HikariDataSource
     Hikari:
       # 最小空闲连接数量
       minimum-idle: 5
